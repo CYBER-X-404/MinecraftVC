@@ -1,16 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/root_container"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content">
-
-    <ImageView
-        android:id="@+id/floating_icon_image"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:padding="8dp"
-        android:background="@android:drawable/dialog_holo_light_frame"
-        android:src="@android:drawable/ic_btn_speak_now"
-        android:contentDescription="Voice Icon" />
-
-</FrameLayout>
+<ImageView
+    android:id="@+id/floating_icon_image"
+    android:layout_width="60dp"
+    android:layout_height="60dp"
+    android:scaleType="fitCenter"
+    
+    <!-- ডিফল্ট আইকনের বদলে আপনার নিজের আইকন ব্যবহার করা হচ্ছে -->
+    android:src="@drawable/my_vc_icon"
+    
+    android:contentDescription="Floating Voice Chat Icon" />
