@@ -1,13 +1,17 @@
+# codemagic.yaml (Corrected Version)
 workflows:
   android-apk-build:
     name: Android APK Build
     instance_type: mac_mini_m1
-    environment:
-      android_sdk_version: '30.0.3' # Or your desired SDK version
+    
+    # 'environment' সেকশনের বাইরে, সরাসরি এখানে SDK ভার্সন দিতে হয়
+    sdk: android
+    
     scripts:
-      - name: Build Android APK
+      - name: Build unsigned debug APK
         script: | 
-          cd ./app # Navigate to the 'app' directory if needed
+          cd ./app
           ./gradlew assembleDebug
+          
     artifacts:
-      - app/build/outputs/apk/debug/app-debug.apk
+      - app/build/outputs/apk/debug/**/*.apk
