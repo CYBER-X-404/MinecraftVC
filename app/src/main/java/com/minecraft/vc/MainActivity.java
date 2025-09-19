@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -39,11 +40,17 @@ public class MainActivity extends AppCompatActivity {
 
     private final IRtcEngineEventHandler mRtcEventHandler = new IRtcEngineEventHandler() {
         @Override
-        public void onJoinChannelSuccess(final String c, final int u, int e) { runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Joined Channel!", Toast.LENGTH_SHORT).show()); }
+        public void onJoinChannelSuccess(final String channel, final int uid, int elapsed) {
+            runOnUiThread(new Runnable() { @Override public void run() { Toast.makeText(getApplicationContext(), "Joined Channel!", Toast.LENGTH_SHORT).show(); } });
+        }
         @Override
-        public void onUserJoined(final int u, int e) { runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Friend joined!", Toast.LENGTH_SHORT).show()); }
+        public void onUserJoined(final int uid, int elapsed) {
+            runOnUiThread(new Runnable() { @Override public void run() { Toast.makeText(getApplicationContext(), "Friend joined!", Toast.LENGTH_SHORT).show(); } });
+        }
         @Override
-        public void onUserOffline(final int u, int r) { runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Friend left.", Toast.LENGTH_SHORT).show()); }
+        public void onUserOffline(final int uid, int reason) {
+            runOnUiThread(new Runnable() { @Override public void run() { Toast.makeText(getApplicationContext(), "Friend left.", Toast.LENGTH_SHORT).show(); } });
+        }
     };
     
     @Override
@@ -52,17 +59,21 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.main);
         toggleButton = findViewById(R.id.toggleButton);
         setupUI();
-        toggleButton.setOnClickListener(v -> {
-            if (!isVoiceChatActive) {
-                if (!checkSelfPermission()) {
-                    ActivityCompat.requestPermissions(this, REQUESTED_PERMISSIONS, PERMISSION_REQ_ID);
-                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-                    checkOverlayPermission();
+        
+        toggleButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!isVoiceChatActive) {
+                    if (!checkSelfPermission()) {
+                        ActivityCompat.requestPermissions(MainActivity.this, REQUESTED_PERMISSIONS, PERMISSION_REQ_ID);
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(MainActivity.this)) {
+                        checkOverlayPermission();
+                    } else {
+                        startVoiceChat();
+                    }
                 } else {
-                    startVoiceChat();
+                    stopVoiceChat();
                 }
-            } else {
-                stopVoiceChat();
             }
         });
     }
@@ -86,18 +97,15 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupUI() { 
         try {
-            // ফন্ট লোড করার চেষ্টা করা হচ্ছে
             Typeface minecraftFont = Typeface.createFromAsset(getAssets(), "fonts/minecraft_font.ttf");
             toggleButton.setTypeface(minecraftFont);
         } catch (Exception e) { 
-            // ফন্ট না পেলেও অ্যাপ ক্র্যাশ করবে না
             Toast.makeText(this, "Minecraft font not found in assets/fonts/", Toast.LENGTH_SHORT).show();
         }
         updateButtonState();
     }
     
     private void updateButtonState() { 
-        // কাস্টম ড্রয়েবল ছাড়া সরাসরি কালার পরিবর্তন করা হচ্ছে
         if (isVoiceChatActive) {
             toggleButton.setText("OFF");
             toggleButton.setBackgroundColor(ContextCompat.getColor(this, R.color.mc_dirt_brown));
@@ -138,11 +146,15 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
         startActivityForResult(intent, CODE_DRAW_OVER_OTHER_APP_PERMISSION);
     }
+    
     @Override
     protected void onActivityResult(int r, int res, @Nullable Intent d) { 
         super.onActivityResult(r, res, d);
-        if (r == CODE_DRAW_OTHER_APP_PERMISSION && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
+        // --- বানান ভুলটি এখানে ঠিক করা হয়েছে ---
+        if (r == CODE_DRAW_OVER_OTHER_APP_PERMISSION && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
             startVoiceChat();
-        } else { Toast.makeText(this, "Draw over other apps permission denied", Toast.LENGTH_SHORT).show(); }
+        } else { 
+            // Toast.makeText(this, "Draw over other apps permission denied", Toast.LENGTH_SHORT).show();
+        }
     }
 }
