@@ -1,4 +1,4 @@
-# codemagic.yaml (Final Version with Gradle Wrapper Generation)
+# codemagic.yaml (Final Version with Correct Gradle Version)
 workflows:
   android-apk-build:
     name: Android APK Build
@@ -10,11 +10,12 @@ workflows:
     scripts:
       - name: Generate Gradle Wrapper
         script: | 
-          gradle wrapper --gradle-version 7.0.2
+          # --- Shudhu ei line-ti poriborton kora hoyeche ---
+          gradle wrapper --gradle-version 7.3.3
           
       - name: Build debug APK
         script: | 
           ./gradlew assembleDebug
           
-    artifacts:
-      - app/build/outputs/apk/debug/**/*.apk
+      artifacts:
+        - app/build/outputs/apk/debug/**/*.apk
