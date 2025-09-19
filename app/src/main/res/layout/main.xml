@@ -5,11 +5,11 @@
     android:background="@color/mc_dark_grey"
     android:gravity="center">
 
-    <androidx.appcompat.widget.AppCompatButton
+    <!-- AppCompatButton-এর বদলে সাধারণ Button ব্যবহার করা হয়েছে -->
+    <Button
         android:id="@+id/toggleButton"
         android:layout_width="250dp"
         android:layout_height="80dp"
-        android:background="@drawable/button_background"
         android:text="START"
         android:textColor="@color/mc_text_light"
         android:textSize="32sp" />
