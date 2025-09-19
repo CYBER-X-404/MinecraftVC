@@ -27,6 +27,8 @@ import io.agora.rtc2.ChannelMediaOptions;
 public class MainActivity extends AppCompatActivity {
 
     private RtcEngine agoraEngine;
+    public static RtcEngine staticAgoraEngine; // <<< VoiceChatService-এর জন্য
+
     private final String appId = "1f3aba7f3dea4d30a53b0a77317e3c83"; 
     private final String channelName = "minecraft-vc-channel-1";
     private final int uid = 0;
@@ -84,6 +86,8 @@ public class MainActivity extends AppCompatActivity {
             config.mAppId = appId;
             config.mEventHandler = mRtcEventHandler;
             agoraEngine = RtcEngine.create(config);
+            staticAgoraEngine = agoraEngine; // <<< static ভেরিয়েবলে agoraEngine-কে সেভ করা
+
             ChannelMediaOptions options = new ChannelMediaOptions();
             options.clientRoleType = Constants.CLIENT_ROLE_BROADCASTER;
             options.channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION;
@@ -95,12 +99,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupUI() { 
         try {
-            // NOTE: You need to manually add the font to 'app/src/main/assets/fonts/minecraft_font.ttf'
             Typeface minecraftFont = Typeface.createFromAsset(getAssets(), "fonts/minecraft_font.ttf");
             toggleButton.setTypeface(minecraftFont);
-        } catch (Exception e) { 
-            // This will fail if font is not present, which is okay for now.
-        }
+        } catch (Exception e) { Toast.makeText(this, "Font not found!", Toast.LENGTH_SHORT).show(); }
         updateButtonState();
     }
     private boolean checkSelfPermission() { return ContextCompat.checkSelfPermission(this, REQUESTED_PERMISSIONS[0]) == PackageManager.PERMISSION_GRANTED; }
@@ -120,6 +121,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() { 
         super.onDestroy();
         if (agoraEngine != null) { RtcEngine.destroy(); }
+        staticAgoraEngine = null;
     }
     private void updateButtonState() { 
         if (isVoiceChatActive) {
