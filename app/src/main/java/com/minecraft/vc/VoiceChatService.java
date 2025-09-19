@@ -12,12 +12,15 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+// MainActivity থেকে agoraEngine অ্যাক্সেস করার জন্য
+import static com.minecraft.vc.MainActivity.staticAgoraEngine;
+
 public class VoiceChatService extends Service {
 
     private WindowManager mWindowManager;
     private View mFloatingView;
     private WindowManager.LayoutParams params;
-    private boolean isVoiceChatOn = true;
+    private boolean isMicMuted = false; // শুরুতে মাইক্রোফোন অন থাকবে (মিউট করা নেই)
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
@@ -72,13 +75,20 @@ public class VoiceChatService extends Service {
                             float yDiff = Math.abs(event.getRawY() - initialTouchY);
 
                             if (touchDuration < CLICK_ACTION_THRESHOLD && xDiff < CLICK_DRAG_THRESHOLD && yDiff < CLICK_DRAG_THRESHOLD) {
-                                isVoiceChatOn = !isVoiceChatOn;
-                                if (isVoiceChatOn) {
-                                    mFloatingView.setAlpha(1.0f);
-                                    Toast.makeText(getApplicationContext(), "Microphone ON", Toast.LENGTH_SHORT).show();
-                                } else {
+                                // --- আসল মিউট লজিক ---
+                                isMicMuted = !isMicMuted;
+                                
+                                if (staticAgoraEngine != null) {
+                                    // Agora-র আসল মিউট ফাংশন কল করা
+                                    staticAgoraEngine.muteLocalAudioStream(isMicMuted);
+                                }
+
+                                if (isMicMuted) {
                                     mFloatingView.setAlpha(0.6f);
                                     Toast.makeText(getApplicationContext(), "Microphone OFF", Toast.LENGTH_SHORT).show();
+                                } else {
+                                    mFloatingView.setAlpha(1.0f);
+                                    Toast.makeText(getApplicationContext(), "Microphone ON", Toast.LENGTH_SHORT).show();
                                 }
                             }
                             return true;
