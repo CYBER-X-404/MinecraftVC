@@ -1,21 +1,17 @@
-# codemagic.yaml (Final Version with Correct Gradle Version)
 workflows:
-  android-apk-build:
-    name: Android APK Build
+  android-build:
+    name: Android Build
     instance_type: mac_mini_m1
     environment:
+      android_sdk_version: "33"
       vars:
         JAVA_HOME: /Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home
-    
     scripts:
       - name: Generate Gradle Wrapper
-        script: | 
-          # --- Shudhu ei line-ti poriborton kora hoyeche ---
+        script: |
           gradle wrapper --gradle-version 7.3.3
-          
       - name: Build debug APK
-        script: | 
+        script: |
           ./gradlew assembleDebug
-          
-      artifacts:
-        - app/build/outputs/apk/debug/**/*.apk
+    artifacts:
+      - app/build/outputs/apk/debug/**/*.apk
