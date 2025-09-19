@@ -1,14 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    // --- Shudhu ei duiti line update kora hoyeche ---
     compileSdkVersion 33
-    buildToolsVersion "33.0.0"
+    // --- Shudhu ei line-ti poriborton kora hoyeche ---
+    buildToolsVersion "30.0.3" 
 
     defaultConfig {
         applicationId "com.minecraft.vc"
         minSdkVersion 21
-        targetSdkVersion 33 // targetSdkVersion o update kora hoyeche
+        targetSdkVersion 33
         versionCode 1
         versionName "1.0"
     }
@@ -29,7 +29,6 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     
-    // --- Library version-gulo o update kora hoyeche ---
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
     
