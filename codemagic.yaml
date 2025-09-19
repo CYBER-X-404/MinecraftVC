@@ -1,17 +1,18 @@
-# codemagic.yaml (Corrected Syntax Version)
+# codemagic.yaml (Final and Corrected Version)
 workflows:
-  android-apk-build:
-    name: Android APK Build
+  android-workflow:
+    name: Android Build
     instance_type: mac_mini_m1
+
+    # আমরা এখানে জোর করে Java 11 ব্যবহার করতে বলছি
+    environment:
+      vars:
+        JAVA_HOME: /Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home
+
     scripts:
-      - name: Set up local.properties
-        script: |
-          echo "sdk.dir=/Users/builder/Library/Android/sdk" > "$CM_BUILD_DIR/local.properties"
-      - name: Set up gradle wrapper
-        script: |
-          gradle wrapper --gradle-version 7.0.2 # Use a specific gradle version
       - name: Build debug APK
-        script: |
+        script: | 
           ./gradlew assembleDebug
+          
     artifacts:
       - app/build/outputs/apk/debug/**/*.apk
