@@ -3,7 +3,6 @@ workflows:
     name: Android Build
     instance_type: mac_mini_m1
     environment:
-      android_sdk_version: "33"
       vars:
         JAVA_HOME: /Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home
     scripts:
