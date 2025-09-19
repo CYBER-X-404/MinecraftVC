@@ -1,11 +1,9 @@
-# codemagic.yaml (Corrected Version)
 workflows:
   android-apk-build:
     name: Android APK Build
     instance_type: mac_mini_m1
     
-    # 'environment' সেকশনের বাইরে, সরাসরি এখানে SDK ভার্সন দিতে হয়
-    sdk: android
+  sdk: android
     
     scripts:
       - name: Build unsigned debug APK
