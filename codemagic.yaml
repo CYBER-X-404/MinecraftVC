@@ -1,15 +1,17 @@
-# codemagic.yaml (Final and Corrected Version)
+# codemagic.yaml (Final Version with Gradle Wrapper Generation)
 workflows:
-  android-workflow:
-    name: Android Build
+  android-apk-build:
+    name: Android APK Build
     instance_type: mac_mini_m1
-
-    # আমরা এখানে জোর করে Java 11 ব্যবহার করতে বলছি
     environment:
       vars:
         JAVA_HOME: /Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home
-
+    
     scripts:
+      - name: Generate Gradle Wrapper
+        script: | 
+          gradle wrapper --gradle-version 7.0.2
+          
       - name: Build debug APK
         script: | 
           ./gradlew assembleDebug
