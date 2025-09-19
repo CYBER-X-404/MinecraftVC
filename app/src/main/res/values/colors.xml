@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Minecraft Palette -->
     <color name="mc_dirt_brown">#5a3a23</color>
     <color name="mc_stone_grey">#7f7f7f</color>
     <color name="mc_grass_green">#549a2c</color>
@@ -7,6 +8,7 @@
     <color name="mc_text_light">#ececec</color>
     <color name="mc_button_border">#1e1e1e</color>
     
+    <!-- App Theme Colors -->
     <color name="colorPrimary">@color/mc_dirt_brown</color>
     <color name="colorPrimaryDark">@color/mc_button_border</color>
     <color name="colorAccent">@color/mc_grass_green</color>
