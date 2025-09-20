@@ -12,7 +12,6 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-// MainActivity থেকে agoraEngine অ্যাক্সেস করার জন্য
 import static com.minecraft.vc.MainActivity.staticAgoraEngine;
 
 public class VoiceChatService extends Service {
@@ -20,7 +19,7 @@ public class VoiceChatService extends Service {
     private WindowManager mWindowManager;
     private View mFloatingView;
     private WindowManager.LayoutParams params;
-    private boolean isMicMuted = false; // শুরুতে মাইক্রোফোন অন থাকবে (মিউট করা নেই)
+    private boolean isMicMuted = false;
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
@@ -75,11 +74,9 @@ public class VoiceChatService extends Service {
                             float yDiff = Math.abs(event.getRawY() - initialTouchY);
 
                             if (touchDuration < CLICK_ACTION_THRESHOLD && xDiff < CLICK_DRAG_THRESHOLD && yDiff < CLICK_DRAG_THRESHOLD) {
-                                // --- আসল মিউট লজিক ---
                                 isMicMuted = !isMicMuted;
                                 
                                 if (staticAgoraEngine != null) {
-                                    // Agora-র আসল মিউট ফাংশন কল করা
                                     staticAgoraEngine.muteLocalAudioStream(isMicMuted);
                                 }
 
