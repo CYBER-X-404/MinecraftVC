@@ -15,7 +15,6 @@ public class VoiceChatService extends Service {
 
     private WindowManager mWindowManager;
     private View mFloatingView;
-    private WindowManager.LayoutParams params; // Made it a class member
     private final String appId = "1f3aba7f3dea4d30a53b0a77317e3c83";
     private final String channelName = "minecraft-vc-channel-1";
 
@@ -24,16 +23,16 @@ public class VoiceChatService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        AgoraManager.initialize(getApplicationContext(), appId, channelName);
         setupFloatingView();
         return START_NOT_STICKY;
     }
 
     private void setupFloatingView() {
+        if (mFloatingView != null) return; // Jate bar bar toiri na hoy
+
         mFloatingView = LayoutInflater.from(this).inflate(R.layout.layout_floating_widget, null);
         
-        // --- Full LayoutParams Code ---
-        params = new WindowManager.LayoutParams(
+        final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
@@ -48,46 +47,27 @@ public class VoiceChatService extends Service {
         mWindowManager.addView(mFloatingView, params);
 
         mFloatingView.findViewById(R.id.root_container).setOnTouchListener(new View.OnTouchListener() {
-            private int initialX, initialY;
-            private float initialTouchX, initialTouchY;
             private long touchStartTime;
-            private static final int CLICK_ACTION_THRESHOLD = 200;
-            private static final float CLICK_DRAG_THRESHOLD = 10;
             
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        initialX = params.x;
-                        initialY = params.y;
-                        initialTouchX = event.getRawX();
-                        initialTouchY = event.getRawY();
-                        touchStartTime = System.currentTimeMillis();
-                        return true;
-
-                    case MotionEvent.ACTION_MOVE:
-                        params.x = initialX + (int) (event.getRawX() - initialTouchX);
-                        params.y = initialY + (int) (event.getRawY() - initialTouchY);
-                        mWindowManager.updateViewLayout(mFloatingView, params);
-                        return true;
-
-                    case MotionEvent.ACTION_UP:
-                        long touchDuration = System.currentTimeMillis() - touchStartTime;
-                        float xDiff = Math.abs(event.getRawX() - initialTouchX);
-                        float yDiff = Math.abs(event.getRawY() - initialTouchY);
-                        
-                        // --- Full Click Logic ---
-                        if (touchDuration < CLICK_ACTION_THRESHOLD && xDiff < CLICK_DRAG_THRESHOLD && yDiff < CLICK_DRAG_THRESHOLD) {
-                            AgoraManager.toggleMute();
-                            if (AgoraManager.isMicMuted()) {
-                                mFloatingView.setAlpha(0.6f);
-                            } else {
-                                mFloatingView.setAlpha(1.0f);
-                            }
-                        }
-                        return true;
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    touchStartTime = System.currentTimeMillis();
                 }
-                return false;
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    if (System.currentTimeMillis() - touchStartTime < 200) {
+                        // --- APNAR LOGIC EKHANE ---
+                        AgoraManager.toggleConnection(getApplicationContext(), appId, channelName);
+                        
+                        if (AgoraManager.isConnected()) {
+                            mFloatingView.setAlpha(1.0f); // Ujjol
+                        } else {
+                            mFloatingView.setAlpha(0.6f); // Apsha
+                        }
+                    }
+                }
+                // Drag code ekhane dewa jete pare, kintu age click thik hok
+                return true;
             }
         });
     }
@@ -97,6 +77,7 @@ public class VoiceChatService extends Service {
         super.onDestroy();
         if (mWindowManager != null && mFloatingView != null) {
             mWindowManager.removeView(mFloatingView);
+            mFloatingView = null;
         }
         AgoraManager.destroy();
     }
