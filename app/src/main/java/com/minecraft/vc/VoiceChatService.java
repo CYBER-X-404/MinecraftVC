@@ -10,73 +10,30 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Toast;
-
-import io.agora.rtc2.ChannelMediaOptions;
-import io.agora.rtc2.Constants;
-import io.agora.rtc2.IRtcEngineEventHandler;
-import io.agora.rtc2.RtcEngine;
-import io.agora.rtc2.RtcEngineConfig;
 
 public class VoiceChatService extends Service {
 
     private WindowManager mWindowManager;
     private View mFloatingView;
-    private RtcEngine agoraEngine; // <<< ইঞ্জিন এখন সার্ভিসের ভেতরে
-
+    private WindowManager.LayoutParams params; // Made it a class member
     private final String appId = "1f3aba7f3dea4d30a53b0a77317e3c83";
     private final String channelName = "minecraft-vc-channel-1";
-    private boolean isMicMuted = false;
-
-    private final IRtcEngineEventHandler mRtcEventHandler = new IRtcEngineEventHandler() {
-        @Override
-        public void onJoinChannelSuccess(final String channel, final int uid, int elapsed) {
-            // Main thread-এ টোস্ট দেখানোর জন্য
-            new android.os.Handler(getMainLooper()).post(() -> Toast.makeText(getApplicationContext(), "Channel Joined!", Toast.LENGTH_SHORT).show());
-        }
-        @Override
-        public void onUserJoined(final int uid, int elapsed) {
-             new android.os.Handler(getMainLooper()).post(() -> Toast.makeText(getApplicationContext(), "Friend joined!", Toast.LENGTH_SHORT).show());
-        }
-        @Override
-        public void onUserOffline(final int uid, int reason) {
-             new android.os.Handler(getMainLooper()).post(() -> Toast.makeText(getApplicationContext(), "Friend left.", Toast.LENGTH_SHORT).show());
-        }
-    };
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        initializeAgoraEngine();
+        AgoraManager.initialize(getApplicationContext(), appId, channelName);
         setupFloatingView();
         return START_NOT_STICKY;
     }
 
-    private void initializeAgoraEngine() {
-        try {
-            RtcEngineConfig config = new RtcEngineConfig();
-            config.mContext = getBaseContext();
-            config.mAppId = appId;
-            config.mEventHandler = mRtcEventHandler;
-            agoraEngine = RtcEngine.create(config);
-
-            ChannelMediaOptions options = new ChannelMediaOptions();
-            options.clientRoleType = Constants.CLIENT_ROLE_BROADCASTER;
-            options.channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION;
-            agoraEngine.joinChannel(null, channelName, 0, options);
-            agoraEngine.muteLocalAudioStream(false); // নিশ্চিত করা যে মাইক্রোফোন চালু আছে
-
-        } catch (Exception e) {
-            Toast.makeText(this, "Agora Init Failed in Service: " + e.toString(), Toast.LENGTH_LONG).show();
-        }
-    }
-
     private void setupFloatingView() {
         mFloatingView = LayoutInflater.from(this).inflate(R.layout.layout_floating_widget, null);
-
-        final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+        
+        // --- Full LayoutParams Code ---
+        params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
@@ -86,7 +43,7 @@ public class VoiceChatService extends Service {
         params.gravity = Gravity.TOP | Gravity.LEFT;
         params.x = 0;
         params.y = 100;
-
+        
         mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         mWindowManager.addView(mFloatingView, params);
 
@@ -96,13 +53,15 @@ public class VoiceChatService extends Service {
             private long touchStartTime;
             private static final int CLICK_ACTION_THRESHOLD = 200;
             private static final float CLICK_DRAG_THRESHOLD = 10;
-
+            
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
-                        initialX = params.x; initialY = params.y;
-                        initialTouchX = event.getRawX(); initialTouchY = event.getRawY();
+                        initialX = params.x;
+                        initialY = params.y;
+                        initialTouchX = event.getRawX();
+                        initialTouchY = event.getRawY();
                         touchStartTime = System.currentTimeMillis();
                         return true;
 
@@ -114,18 +73,16 @@ public class VoiceChatService extends Service {
 
                     case MotionEvent.ACTION_UP:
                         long touchDuration = System.currentTimeMillis() - touchStartTime;
-                        if (touchDuration < CLICK_ACTION_THRESHOLD) {
-                            // --- আসল মিউট লজিক ---
-                            isMicMuted = !isMicMuted;
-                            if (agoraEngine != null) {
-                                agoraEngine.muteLocalAudioStream(isMicMuted);
-                            }
-                            if (isMicMuted) {
+                        float xDiff = Math.abs(event.getRawX() - initialTouchX);
+                        float yDiff = Math.abs(event.getRawY() - initialTouchY);
+                        
+                        // --- Full Click Logic ---
+                        if (touchDuration < CLICK_ACTION_THRESHOLD && xDiff < CLICK_DRAG_THRESHOLD && yDiff < CLICK_DRAG_THRESHOLD) {
+                            AgoraManager.toggleMute();
+                            if (AgoraManager.isMicMuted()) {
                                 mFloatingView.setAlpha(0.6f);
-                                Toast.makeText(getApplicationContext(), "Microphone OFF", Toast.LENGTH_SHORT).show();
                             } else {
                                 mFloatingView.setAlpha(1.0f);
-                                Toast.makeText(getApplicationContext(), "Microphone ON", Toast.LENGTH_SHORT).show();
                             }
                         }
                         return true;
@@ -141,10 +98,6 @@ public class VoiceChatService extends Service {
         if (mWindowManager != null && mFloatingView != null) {
             mWindowManager.removeView(mFloatingView);
         }
-        if (agoraEngine != null) {
-            agoraEngine.leaveChannel();
-            RtcEngine.destroy();
-            agoraEngine = null;
-        }
+        AgoraManager.destroy();
     }
 }
