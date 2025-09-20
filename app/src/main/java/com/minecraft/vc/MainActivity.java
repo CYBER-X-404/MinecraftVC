@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -27,7 +26,8 @@ import io.agora.rtc2.ChannelMediaOptions;
 public class MainActivity extends AppCompatActivity {
 
     private RtcEngine agoraEngine;
-    public static RtcEngine staticAgoraEngine;
+    public static RtcEngine staticAgoraEngine; // <<< VoiceChatService-এর জন্য
+
     private final String appId = "1f3aba7f3dea4d30a53b0a77317e3c83"; 
     private final String channelName = "minecraft-vc-channel-1";
     private final int uid = 0;
@@ -40,17 +40,11 @@ public class MainActivity extends AppCompatActivity {
 
     private final IRtcEngineEventHandler mRtcEventHandler = new IRtcEngineEventHandler() {
         @Override
-        public void onJoinChannelSuccess(final String channel, final int uid, int elapsed) {
-            runOnUiThread(new Runnable() { @Override public void run() { Toast.makeText(getApplicationContext(), "Joined Channel!", Toast.LENGTH_SHORT).show(); } });
-        }
+        public void onJoinChannelSuccess(final String c, final int u, int e) { runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Joined Channel!", Toast.LENGTH_SHORT).show()); }
         @Override
-        public void onUserJoined(final int uid, int elapsed) {
-            runOnUiThread(new Runnable() { @Override public void run() { Toast.makeText(getApplicationContext(), "Friend joined!", Toast.LENGTH_SHORT).show(); } });
-        }
+        public void onUserJoined(final int u, int e) { runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Friend joined!", Toast.LENGTH_SHORT).show()); }
         @Override
-        public void onUserOffline(final int uid, int reason) {
-            runOnUiThread(new Runnable() { @Override public void run() { Toast.makeText(getApplicationContext(), "Friend left.", Toast.LENGTH_SHORT).show(); } });
-        }
+        public void onUserOffline(final int u, int r) { runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Friend left.", Toast.LENGTH_SHORT).show()); }
     };
     
     @Override
@@ -59,21 +53,17 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.main);
         toggleButton = findViewById(R.id.toggleButton);
         setupUI();
-        
-        toggleButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (!isVoiceChatActive) {
-                    if (!checkSelfPermission()) {
-                        ActivityCompat.requestPermissions(MainActivity.this, REQUESTED_PERMISSIONS, PERMISSION_REQ_ID);
-                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(MainActivity.this)) {
-                        checkOverlayPermission();
-                    } else {
-                        startVoiceChat();
-                    }
+        toggleButton.setOnClickListener(v -> {
+            if (!isVoiceChatActive) {
+                if (!checkSelfPermission()) {
+                    ActivityCompat.requestPermissions(this, REQUESTED_PERMISSIONS, PERMISSION_REQ_ID);
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+                    checkOverlayPermission();
                 } else {
-                    stopVoiceChat();
+                    startVoiceChat();
                 }
+            } else {
+                stopVoiceChat();
             }
         });
     }
@@ -85,7 +75,8 @@ public class MainActivity extends AppCompatActivity {
             config.mAppId = appId;
             config.mEventHandler = mRtcEventHandler;
             agoraEngine = RtcEngine.create(config);
-            staticAgoraEngine = agoraEngine;
+            staticAgoraEngine = agoraEngine; // <<< static ভেরিয়েবলে agoraEngine-কে সেভ করা
+
             ChannelMediaOptions options = new ChannelMediaOptions();
             options.clientRoleType = Constants.CLIENT_ROLE_BROADCASTER;
             options.channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION;
@@ -99,9 +90,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             Typeface minecraftFont = Typeface.createFromAsset(getAssets(), "fonts/minecraft_font.ttf");
             toggleButton.setTypeface(minecraftFont);
-        } catch (Exception e) { 
-            Toast.makeText(this, "Minecraft font not found in assets/fonts/", Toast.LENGTH_SHORT).show();
-        }
+        } catch (Exception e) { Toast.makeText(this, "Minecraft font not found in assets/fonts/", Toast.LENGTH_SHORT).show(); }
         updateButtonState();
     }
     
@@ -146,15 +135,11 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
         startActivityForResult(intent, CODE_DRAW_OVER_OTHER_APP_PERMISSION);
     }
-    
     @Override
     protected void onActivityResult(int r, int res, @Nullable Intent d) { 
         super.onActivityResult(r, res, d);
-        // --- বানান ভুলটি এখানে ঠিক করা হয়েছে ---
         if (r == CODE_DRAW_OVER_OTHER_APP_PERMISSION && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
             startVoiceChat();
-        } else { 
-            // Toast.makeText(this, "Draw over other apps permission denied", Toast.LENGTH_SHORT).show();
-        }
+        } else { Toast.makeText(this, "Draw over other apps permission denied", Toast.LENGTH_SHORT).show(); }
     }
 }
