@@ -12,95 +12,139 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-import static com.minecraft.vc.MainActivity.staticAgoraEngine;
+import io.agora.rtc2.ChannelMediaOptions;
+import io.agora.rtc2.Constants;
+import io.agora.rtc2.IRtcEngineEventHandler;
+import io.agora.rtc2.RtcEngine;
+import io.agora.rtc2.RtcEngineConfig;
 
 public class VoiceChatService extends Service {
 
     private WindowManager mWindowManager;
     private View mFloatingView;
-    private WindowManager.LayoutParams params;
+    private RtcEngine agoraEngine; // <<< ইঞ্জিন এখন সার্ভিসের ভেতরে
+
+    private final String appId = "1f3aba7f3dea4d30a53b0a77317e3c83";
+    private final String channelName = "minecraft-vc-channel-1";
     private boolean isMicMuted = false;
+
+    private final IRtcEngineEventHandler mRtcEventHandler = new IRtcEngineEventHandler() {
+        @Override
+        public void onJoinChannelSuccess(final String channel, final int uid, int elapsed) {
+            // Main thread-এ টোস্ট দেখানোর জন্য
+            new android.os.Handler(getMainLooper()).post(() -> Toast.makeText(getApplicationContext(), "Channel Joined!", Toast.LENGTH_SHORT).show());
+        }
+        @Override
+        public void onUserJoined(final int uid, int elapsed) {
+             new android.os.Handler(getMainLooper()).post(() -> Toast.makeText(getApplicationContext(), "Friend joined!", Toast.LENGTH_SHORT).show());
+        }
+        @Override
+        public void onUserOffline(final int uid, int reason) {
+             new android.os.Handler(getMainLooper()).post(() -> Toast.makeText(getApplicationContext(), "Friend left.", Toast.LENGTH_SHORT).show());
+        }
+    };
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
 
     @Override
-    public void onCreate() {
-        super.onCreate();
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        initializeAgoraEngine();
+        setupFloatingView();
+        return START_NOT_STICKY;
+    }
+
+    private void initializeAgoraEngine() {
         try {
-            mFloatingView = LayoutInflater.from(this).inflate(R.layout.layout_floating_widget, null);
+            RtcEngineConfig config = new RtcEngineConfig();
+            config.mContext = getBaseContext();
+            config.mAppId = appId;
+            config.mEventHandler = mRtcEventHandler;
+            agoraEngine = RtcEngine.create(config);
 
-            params = new WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.WRAP_CONTENT,
-                    WindowManager.LayoutParams.WRAP_CONTENT,
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                    PixelFormat.TRANSLUCENT);
+            ChannelMediaOptions options = new ChannelMediaOptions();
+            options.clientRoleType = Constants.CLIENT_ROLE_BROADCASTER;
+            options.channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION;
+            agoraEngine.joinChannel(null, channelName, 0, options);
+            agoraEngine.muteLocalAudioStream(false); // নিশ্চিত করা যে মাইক্রোফোন চালু আছে
 
-            params.gravity = Gravity.TOP | Gravity.LEFT;
-            params.x = 0;
-            params.y = 100;
-
-            mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-            mWindowManager.addView(mFloatingView, params);
-
-            mFloatingView.findViewById(R.id.root_container).setOnTouchListener(new View.OnTouchListener() {
-                private int initialX, initialY;
-                private float initialTouchX, initialTouchY;
-                private long touchStartTime;
-                private static final int CLICK_ACTION_THRESHOLD = 200;
-                private static final float CLICK_DRAG_THRESHOLD = 10;
-
-                @Override
-                public boolean onTouch(View v, MotionEvent event) {
-                    switch (event.getAction()) {
-                        case MotionEvent.ACTION_DOWN:
-                            initialX = params.x;
-                            initialY = params.y;
-                            initialTouchX = event.getRawX();
-                            initialTouchY = event.getRawY();
-                            touchStartTime = System.currentTimeMillis();
-                            return true;
-
-                        case MotionEvent.ACTION_MOVE:
-                            params.x = initialX + (int) (event.getRawX() - initialTouchX);
-                            params.y = initialY + (int) (event.getRawY() - initialTouchY);
-                            mWindowManager.updateViewLayout(mFloatingView, params);
-                            return true;
-
-                        case MotionEvent.ACTION_UP:
-                            long touchDuration = System.currentTimeMillis() - touchStartTime;
-                            float xDiff = Math.abs(event.getRawX() - initialTouchX);
-                            float yDiff = Math.abs(event.getRawY() - initialTouchY);
-
-                            if (touchDuration < CLICK_ACTION_THRESHOLD && xDiff < CLICK_DRAG_THRESHOLD && yDiff < CLICK_DRAG_THRESHOLD) {
-                                isMicMuted = !isMicMuted;
-                                
-                                if (staticAgoraEngine != null) {
-                                    staticAgoraEngine.muteLocalAudioStream(isMicMuted);
-                                }
-
-                                if (isMicMuted) {
-                                    mFloatingView.setAlpha(0.6f);
-                                    Toast.makeText(getApplicationContext(), "Microphone OFF", Toast.LENGTH_SHORT).show();
-                                } else {
-                                    mFloatingView.setAlpha(1.0f);
-                                    Toast.makeText(getApplicationContext(), "Microphone ON", Toast.LENGTH_SHORT).show();
-                                }
-                            }
-                            return true;
-                    }
-                    return false;
-                }
-            });
         } catch (Exception e) {
-            Toast.makeText(this, "Floating Icon Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Agora Init Failed in Service: " + e.toString(), Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void setupFloatingView() {
+        mFloatingView = LayoutInflater.from(this).inflate(R.layout.layout_floating_widget, null);
+
+        final WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT);
+
+        params.gravity = Gravity.TOP | Gravity.LEFT;
+        params.x = 0;
+        params.y = 100;
+
+        mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        mWindowManager.addView(mFloatingView, params);
+
+        mFloatingView.findViewById(R.id.root_container).setOnTouchListener(new View.OnTouchListener() {
+            private int initialX, initialY;
+            private float initialTouchX, initialTouchY;
+            private long touchStartTime;
+            private static final int CLICK_ACTION_THRESHOLD = 200;
+            private static final float CLICK_DRAG_THRESHOLD = 10;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        initialX = params.x; initialY = params.y;
+                        initialTouchX = event.getRawX(); initialTouchY = event.getRawY();
+                        touchStartTime = System.currentTimeMillis();
+                        return true;
+
+                    case MotionEvent.ACTION_MOVE:
+                        params.x = initialX + (int) (event.getRawX() - initialTouchX);
+                        params.y = initialY + (int) (event.getRawY() - initialTouchY);
+                        mWindowManager.updateViewLayout(mFloatingView, params);
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                        long touchDuration = System.currentTimeMillis() - touchStartTime;
+                        if (touchDuration < CLICK_ACTION_THRESHOLD) {
+                            // --- আসল মিউট লজিক ---
+                            isMicMuted = !isMicMuted;
+                            if (agoraEngine != null) {
+                                agoraEngine.muteLocalAudioStream(isMicMuted);
+                            }
+                            if (isMicMuted) {
+                                mFloatingView.setAlpha(0.6f);
+                                Toast.makeText(getApplicationContext(), "Microphone OFF", Toast.LENGTH_SHORT).show();
+                            } else {
+                                mFloatingView.setAlpha(1.0f);
+                                Toast.makeText(getApplicationContext(), "Microphone ON", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                        return true;
+                }
+                return false;
+            }
+        });
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (mFloatingView != null) try { mWindowManager.removeView(mFloatingView); } catch (Exception e) {}
+        if (mWindowManager != null && mFloatingView != null) {
+            mWindowManager.removeView(mFloatingView);
+        }
+        if (agoraEngine != null) {
+            agoraEngine.leaveChannel();
+            RtcEngine.destroy();
+            agoraEngine = null;
+        }
     }
 }
